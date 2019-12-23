@@ -7,3 +7,4 @@ This repository collections all my useless projects which one day could be move-
 to a single project, someday.
 
 - *rootkit* : a simple but useless system rootkit.
+- *packer-fantasy* : a simple but useless binary packer (based on Golang).
