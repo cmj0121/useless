@@ -21,6 +21,6 @@ func main() {
 
 ## Roadmap ##
 - [x] show the tree-view of the object's fields
-- [ ] colorize
+- [x] colorize
 - [ ] show the methods
 - [ ] specified the level of the nested fields (default: -1)

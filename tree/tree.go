@@ -2,29 +2,16 @@
 package tree
 
 import (
-	"fmt"
 	"reflect"
-	"strings"
 )
 
 type Tree struct {
 	*treeView
 	In interface{}
 
-	types map[reflect.Type]struct{}
-}
-
-type TreeNode struct {
-	Field string
-	Type  string
-}
-
-func (node TreeNode) String() (out string) {
-	if out = fmt.Sprintf("%-8s [%s]", node.Field, node.Type); node.Field == "" {
-		out = node.Type
-	}
-	out = strings.Trim(out, " ")
-	return
+	/* Used to avoid the stack-overflow */
+	types    map[reflect.Type]struct{}
+	colorize bool
 }
 
 func New(in interface{}) (out *Tree) {
@@ -35,77 +22,65 @@ func New(in interface{}) (out *Tree) {
 	return
 }
 
+func (in *Tree) Colorize() (out *Tree) {
+	in.colorize = true
+	out = in
+	return
+}
+
 func (in *Tree) String() (out string) {
+	out = in.ToString(-1)
+	return
+}
+
+func (in *Tree) ToString(lv int) (out string) {
 	/* parse the target object */
-	in.treeView = in.Parse(reflect.TypeOf(in.In))
+	in.treeView = in.Parse(reflect.TypeOf(in.In), lv)
 	out = in.treeView.String()
 	return
 }
 
-func (tree *Tree) Parse(in reflect.Type) (out *treeView) {
+func (tree *Tree) Parse(in reflect.Type, lv int) (out *treeView) {
+	/* NOTE - update the types map first */
 	tree.types[in] = struct{}{}
 
 	switch in.Kind() {
 	case reflect.Ptr:
-		out = tree.Parse(in.Elem())
+		out = tree.Parse(in.Elem(), lv)
 		/* Set as the POINTER */
-		node := out.Data.(*TreeNode)
-		node.Type = fmt.Sprintf("*%s", node.Type)
-	case reflect.Slice, reflect.Array:
-		out = tree.Parse(in.Elem())
-		/* Set as the slice */
-		node := out.Data.(*TreeNode)
-		node.Type = fmt.Sprintf("slice %s", node.Type)
-	case reflect.Map:
-		out = tree.Parse(in.Elem())
-		/* Set as the map */
-		node := out.Data.(*TreeNode)
-		node.Type = fmt.Sprintf("map %s:%s", in.Key(), node.Type)
-	case reflect.Chan:
-		out = tree.Parse(in.Elem())
-		/* Set as the slice */
-		node := out.Data.(*TreeNode)
-		node.Type = fmt.Sprintf("%s %s", in.ChanDir(), node.Type)
+		node := out.Data.(*nodeType)
+		node.Type = in
 	case reflect.Struct:
-		node := &TreeNode{
-			Field: "",
-			Type:  in.Name(),
-		}
-
-		if node.Type == "" {
-			/* anonymous structure */
-			node.Type = "struct"
-		}
-
-		out = NewTreeView(node)
-		/* NOTE - update the types map first */
-
-		for idx := 0; idx < in.NumField(); idx++ {
-			field := in.Field(idx)
-
-			if _, ok := tree.types[field.Type]; ok {
-				/* NOTE - avoid stack overflow */
-				continue
-			}
-
-			field_tree := tree.Parse(field.Type)
-			out.InsertTree(field_tree)
-
-			if field.Anonymous == false {
-				node := field_tree.Data.(*TreeNode)
-				node.Field = field.Name
-			}
-		}
-	case reflect.Interface:
-		node := &TreeNode{
-			Field: "",
-			Type:  "interface",
+		node := &nodeType{
+			FieldName: "",
+			Type:      in,
+			Colorize:  tree.colorize,
 		}
 		out = NewTreeView(node)
+
+		/* NOTE - Only recursive when level is not zero */
+		if lv != 0 {
+			for idx := 0; idx < in.NumField(); idx++ {
+				field := in.Field(idx)
+
+				if _, ok := tree.types[field.Type]; ok {
+					/* NOTE - avoid stack overflow, skip */
+					continue
+				}
+
+				field_tree := tree.Parse(field.Type, lv-1)
+				out.InsertTree(field_tree)
+
+				if field.Anonymous == false {
+					node := field_tree.Data.(*nodeType)
+					node.FieldName = field.Name
+				}
+			}
+		}
 	default:
-		node := &TreeNode{
-			Field: "",
-			Type:  in.Name(),
+		node := &nodeType{
+			Type:     in,
+			Colorize: tree.colorize,
 		}
 		out = NewTreeView(node)
 	}

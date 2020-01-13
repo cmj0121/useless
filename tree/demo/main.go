@@ -9,6 +9,6 @@ import (
 
 func main() {
 	obj := tree.Tree{}
-	fmt.Println(tree.New(&obj))
-
+	help := tree.New(&obj).Colorize()
+	fmt.Println(help)
 }
