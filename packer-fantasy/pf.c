@@ -7,20 +7,98 @@
 #include <sys/mman.h>
 
 #define DEBUG(msg, ...)	\
-	do {				\
-		fprintf(stderr, "[%s #%04d] " msg "\n", __FILE__, __LINE__, ##__VA_ARGS__); \
-	} while (0)
+	fprintf(stderr, "[%s #%04d] " msg "\n", __FILE__, __LINE__, ##__VA_ARGS__); \
 
-#define BYTE( expr ) ( (char)((expr) & 0xFF))
+off_t Shift(void *bin, off_t len, unsigned char key) {
+	Elf64_Ehdr *hdr = bin;
+	off_t entry = hdr->e_entry;
+	off_t code_off = 0;
+	off_t code_len = 0;
 
-#define KEY	0x4A
+	/* Find entry pointer */
+	DEBUG("Entry Point : vaddr 0x%lX", entry);
+
+	/* Find machine code */
+	off_t offset = hdr->e_phoff;
+	for (int i = 0; i < hdr->e_phnum; ++i) {
+		Elf64_Phdr *phdr = bin + offset;
+
+		if (phdr->p_type == PT_LOAD) {
+			phdr->p_flags = PF_R | PF_X | PF_W;
+			DEBUG("Find LOAD program on #%d, change to PF_R|PF_W|PF_X, change to PF_R|PF_W|PF_X", i);
+
+			code_off = entry - phdr->p_vaddr;
+			code_len = phdr->p_filesz;
+			DEBUG("Code located on file offset 0x%lx, %ld bytes", code_off, code_len);
+			break;
+		}
+	}
+
+	/* Encode machine code */
+	unsigned char enc_key = key;
+	unsigned char *code = bin + code_off;
+	for (off_t i = 0; i < code_len; ++i) {
+		code[i] = code[i] ^ enc_key;
+		enc_key ++;
+	}
+
+	/* Add decoder */
+	unsigned char decoder[] = {
+		/* 0000 mov rax EntryPoint */
+		0xB8, 0xAA, 0xAA, 0xAA, 0xAA,
+		/* 0005 mov rcx CodeLength */
+		0xB9, 0xBB, 0xBB, 0xBB, 0xBB,
+		/* 000A mov dl KEY */
+		0xB2, 0xCC,
+		/* 000C xor byte [rax] dl */
+		0x30, 0x10,
+		/* 000E inc dl */
+		0xFE, 0xC2,
+		/* 0010 inc rax */
+		0x48, 0xFF, 0xC0,
+		/* 0013 loop */
+		0xE2, 0xF7,
+		/* 0015 jmp EntryPoint */
+	 	0xE9, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA,
+	};
+	uint8_t *ptr8 = NULL;
+	uint32_t *ptr32 = NULL;
+
+	/* setup the entry pointer */
+	ptr32 = (uint32_t *)(decoder + 0x1);
+	*ptr32 = (uint32_t)entry;
+	/* setup the code length  */
+	ptr32 = (uint32_t *)(decoder + 0x6);
+	*ptr32 = (uint32_t)code_len;
+	/* set the key */
+	ptr8 = (uint8_t *)(decoder + 0x0B);
+	*ptr8 = (uint8_t)key;
+	/* setup the original address  */
+	ptr32 = (uint32_t *)(decoder + 0x16);
+	*ptr32 = (uint32_t)(0) - (uint32_t)(code_len + sizeof(decoder)) + 1;
+
+	for (int i = 0; i < sizeof(decoder); ++i) {
+		code[code_len + i] = decoder[i];
+	}
+
+	/* Update entry pointer */
+	hdr->e_entry = entry + code_len;
+	DEBUG("Change to new entry addr : vaddr 0x%lX", hdr->e_entry);
+	return len + sizeof(decoder);
+}
 
 
 int main(int argc, char* argv[]) {
 	int fd = -1;
-	char src[] = "a.out", dst[] = "b.out";
 
-	if (0 > (fd = open(src, O_RDONLY))) {
+	if (argc < 2) {
+		DEBUG("%s FILE", argv[0]);
+		return -1;
+	}
+
+	DEBUG("WARNING: !! This is the experience tool and only workable on ELF / 1 LOAD binary !!");
+
+	if (0 > (fd = open(argv[1], O_RDONLY))) {
 		DEBUG("Cannot open file %s", argv[1]);
 		return -1;
 	}
@@ -33,84 +111,24 @@ int main(int argc, char* argv[]) {
 	}
 
 	Elf64_Ehdr *hdr = ptr;
-	char decoder[] = {
-		/* mov	rax	Entry      */
-		0xb8, 0x00, 0x00, 0x00, 0x00,
-		/* mov	rcx	filesz     */
-		0xb9, 0x00, 0x00, 0x00, 0x00,
-		/* mov	bl	KEY        */
-		0xB3, 0x00,
-		/* xor	byte [rax] KEY */
-		//0x30, 0x18,
-		/* inc	rax            */
-		0xFF, 0xC0,
-		/* loopz               */
-		0XE1, 0XFB,
-		/* jmp	to Entry       */
-		0xE9, 0x00, 0x00, 0x00, 0x00,
-	};
-
-	for (int i = 0; i < hdr->e_phnum; i++) {
-		long offset = i * sizeof(Elf64_Phdr) + hdr->e_phoff;
-		Elf64_Phdr *phdr = ptr + offset;
-
-		if (phdr->p_type == PT_LOAD &&  phdr->p_flags == (PF_X+PF_R)) {
-			/* Find the necessary program header */
-			uint64_t offset = phdr->p_offset;
-			uint64_t filesz = phdr->p_filesz;
-			long entry_offset = (long)0 - filesz - sizeof(decoder) + (hdr->e_entry - offset);
-
-			/* Update the offset */
-			decoder[1] = BYTE(offset);
-			decoder[2] = BYTE(offset >> 8);
-			decoder[3] = BYTE(offset >> 16);
-			decoder[4] = BYTE(offset >> 24);
-			/* Update the filesz */
-			decoder[6] = BYTE(filesz);
-			decoder[7] = BYTE(filesz >> 8);
-			decoder[8] = BYTE(filesz >> 16);
-			decoder[9] = BYTE(filesz >> 24);
-			/* Update the entry */
-			decoder[sizeof(decoder)-4] = BYTE(entry_offset);
-			decoder[sizeof(decoder)-3] = BYTE(entry_offset >> 8);
-			decoder[sizeof(decoder)-2] = BYTE(entry_offset >> 16);
-			decoder[sizeof(decoder)-1] = BYTE(entry_offset >> 24);
-
-			DEBUG("Program size : %X, offset : %X", filesz, offset);
-			for (uint64_t off = 0; off < phdr->p_filesz; ++off) {
-				//((char *)ptr)[offset + off] ^= KEY;
-			}
-
-			for (int i = 0; i < sizeof(decoder); ++i) {
-				((char *)ptr)[phdr->p_filesz + phdr->p_offset + i] = decoder[i];
-			}
-
-			DEBUG("New entry : %X", phdr->p_filesz + phdr->p_offset);
-
-			/* Set writable */
-			phdr->p_flags = PF_R + PF_W + PF_X;
-			/* Change the entry address */
-			hdr->e_entry = phdr->p_filesz + phdr->p_offset;
-
-			/* update the filesz */
-			phdr->p_filesz += sizeof(decoder);
-			phdr->p_memsz += sizeof(decoder);
-
-			/* DEBUG usage */
-			Elf64_Shdr *shdr = ptr + hdr->e_shoff + 12 * sizeof(Elf64_Shdr);
-			shdr->sh_size += sizeof(decoder);
-
-			break;
-		}
+	if (hdr->e_ident[EI_MAG0] != ELFMAG0 || hdr->e_ident[EI_MAG1] != ELFMAG1 || hdr->e_ident[EI_MAG2] != ELFMAG2) {
+		DEBUG("Not the ELF file");
+		return -1;
+	} else if (hdr->e_ident[EI_CLASS] != ELFCLASS64) {
+		DEBUG("Not the ELF/64 file");
+		return -1;
 	}
 
+	/* packer */
+	total_filesz = Shift(ptr, total_filesz, 0x12);
 
 	int writer = -1;
+	char dst[] = "packed";
 	if (0 > (writer = open(dst, O_WRONLY | O_CREAT, 0755))) {
 		DEBUG("Cannot open file %s", dst);
 		return -1;
 	}
-	write(writer, ptr, total_filesz + sizeof(decoder));
+	write(writer, ptr, total_filesz);
 
 	close(fd);
 	close(writer);

@@ -3,12 +3,16 @@ BIN=pf
 
 SUBDIR=
 
-.PHONY: all
+.PHONY: all demo
 
 all: $(BIN)
 
 $(BIN): $(SRC)
 	gcc -o $@ $^
+
+demo: $(BIN)
+	./$(BIN) demo
+
 
 .PHONY: clean
 
