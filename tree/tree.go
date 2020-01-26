@@ -10,20 +10,28 @@ type Tree struct {
 	In interface{}
 
 	/* Used to avoid the stack-overflow */
-	types    map[reflect.Type]struct{}
-	colorize bool
+	types       map[reflect.Type]struct{}
+	colorize    bool
+	showMethods bool
 }
 
 func New(in interface{}) (out *Tree) {
 	out = &Tree{
-		In:    in,
-		types: make(map[reflect.Type]struct{}, 0),
+		In:          in,
+		colorize:    false,
+		showMethods: false,
 	}
 	return
 }
 
 func (in *Tree) Colorize() (out *Tree) {
 	in.colorize = true
+	out = in
+	return
+}
+
+func (in *Tree) ShowMethods() (out *Tree) {
+	in.showMethods = true
 	out = in
 	return
 }
@@ -35,18 +43,19 @@ func (in *Tree) String() (out string) {
 
 func (in *Tree) ToString(lv int) (out string) {
 	/* parse the target object */
-	in.treeView = in.Parse(reflect.TypeOf(in.In), lv)
+	in.types = make(map[reflect.Type]struct{}, 0)
+	in.treeView = in.parse(reflect.TypeOf(in.In), lv)
 	out = in.treeView.String()
 	return
 }
 
-func (tree *Tree) Parse(in reflect.Type, lv int) (out *treeView) {
+func (tree *Tree) parse(in reflect.Type, lv int) (out *treeView) {
 	/* NOTE - update the types map first */
 	tree.types[in] = struct{}{}
 
 	switch in.Kind() {
 	case reflect.Ptr:
-		out = tree.Parse(in.Elem(), lv)
+		out = tree.parse(in.Elem(), lv)
 		/* Set as the POINTER */
 		node := out.Data.(*nodeType)
 		node.Type = in
@@ -68,7 +77,7 @@ func (tree *Tree) Parse(in reflect.Type, lv int) (out *treeView) {
 					continue
 				}
 
-				field_tree := tree.Parse(field.Type, lv-1)
+				field_tree := tree.parse(field.Type, lv-1)
 				out.InsertTree(field_tree)
 
 				if field.Anonymous == false {
@@ -76,7 +85,19 @@ func (tree *Tree) Parse(in reflect.Type, lv int) (out *treeView) {
 					node.FieldName = field.Name
 				}
 			}
+
+			if tree.showMethods {
+				for idx := 0; idx < in.NumMethod(); idx++ {
+					method := in.Method(idx)
+					method_tree := tree.parse(method.Type, lv-1)
+					out.InsertTree(method_tree)
+
+					node := method_tree.Data.(*nodeType)
+					node.FieldName = method.Name
+				}
+			}
 		}
+
 	default:
 		node := &nodeType{
 			Type:     in,

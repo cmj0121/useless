@@ -10,5 +10,9 @@ import (
 func main() {
 	obj := tree.Tree{}
 	help := tree.New(&obj).Colorize()
+	fmt.Println("==== Show to full properties ====")
 	fmt.Println(help)
+
+	fmt.Println("==== Show to properties within 1 level ====")
+	fmt.Println(help.ToString(1))
 }

@@ -50,6 +50,8 @@ func (node *nodeType) TypeName(in reflect.Type) (out string) {
 			/* anonymous structure */
 			out = fmt.Sprintf("%sstruct%s", node.TagColor(), node.Reset())
 		}
+	case reflect.Func:
+		out = fmt.Sprintf("%s%s%s", node.PointerColor(), in, node.Reset())
 	default:
 		out = fmt.Sprintf("%s%s%s", node.TagColor(), in.Name(), node.Reset())
 	}
