@@ -2,16 +2,19 @@
 package dcard
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
 	"time"
 )
 
 const (
 	VERSION = "1.0.0"
-	API     = "https://www.dcard.tw/_api"
+	HOST    = "https://www.dcard.tw"
+	API     = "_api"
 )
 
 type DCard struct {
@@ -22,7 +25,7 @@ type DCard struct {
 
 func New() (out *DCard) {
 	out = &DCard{
-		timeout: time.Second * 4,
+		timeout: time.Second * 40,
 		limit:   20,
 		popular: false,
 	}
@@ -68,8 +71,33 @@ func (d *DCard) fetch(uri string) []byte {
 	return body
 }
 
+func (d *DCard) Boards() (out []DCardBoard) {
+	data := d.fetch(HOST)
+	re := regexp.MustCompile(`<script>([\s\S]+?)</script>`)
+
+	type DCardConf struct {
+		Forum struct {
+			Stores []DCardBoard `json:"store"`
+		} `json:"forums"`
+	}
+	conf := DCardConf{}
+
+	for _, matched := range re.FindAllSubmatch(data, -1) {
+		if bytes.Compare(matched[1][:14], []byte("window.$STATE=")) == 0 {
+			if err := json.Unmarshal(matched[1][14:], &conf); err != nil {
+				err = fmt.Errorf("Parse json failure - %s", err)
+				panic(err)
+			}
+
+			out = conf.Forum.Stores
+			break
+		}
+	}
+	return
+}
+
 func (d *DCard) Posts(forum string, before int64) (out []DCardPost) {
-	URL := fmt.Sprintf("%s/forums/%s/posts?popular=%v&limit=%d", API, forum, d.popular, d.limit)
+	URL := fmt.Sprintf("%s/%s/forums/%s/posts?popular=%v&limit=%d", HOST, API, forum, d.popular, d.limit)
 	if before > 0 {
 		URL = fmt.Sprintf("%s&before=%d", URL, before)
 	}

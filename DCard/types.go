@@ -59,3 +59,13 @@ func (p DCardPost) String() (out string) {
 	out = fmt.Sprintf("[%d@%s] %s", p.Id, p.ForumName, p.Title)
 	return
 }
+
+type DCardBoard struct {
+	Name  string `json:"name"`
+	Alias string `json:"alias"`
+}
+
+func (b DCardBoard) String() (out string) {
+	out = fmt.Sprintf("%s (%s)", b.Alias, b.Name)
+	return
+}
