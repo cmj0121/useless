@@ -2,8 +2,14 @@
 package main
 
 import (
-	_ "github.com/cmj0121/useless/dcard"
+	"fmt"
+
+	"github.com/cmj0121/useless/dcard"
 )
 
 func main() {
+	agent := dcard.New()
+
+	fmt.Println(agent.Boards()[0])
+	fmt.Println(agent.Posts("ntu", -1))
 }

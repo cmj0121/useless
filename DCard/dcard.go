@@ -17,6 +17,10 @@ const (
 	API     = "_api"
 )
 
+var (
+	default_agent = New()
+)
+
 type DCard struct {
 	timeout time.Duration
 	limit   int
@@ -108,5 +112,34 @@ func (d *DCard) Posts(forum string, before int64) (out []DCardPost) {
 		panic(err)
 	}
 
+	return
+}
+
+func (d *DCard) Comments(post DCardPost, after int) (out []DCardComment) {
+	URL := fmt.Sprintf("%s/%s/posts/%v/comments", HOST, API, post.Id)
+	if after >= 0 {
+		URL = fmt.Sprintf("%s?after=%d", URL, after)
+	}
+	data := default_agent.fetch(URL)
+
+	if err := json.Unmarshal(data, &out); err != nil {
+		err = fmt.Errorf("Parse json failure - %s", err)
+		panic(err)
+	}
+
+	return
+}
+
+func (d *DCard) AllComments(post DCardPost) (out []DCardComment) {
+	after := 0
+	for {
+		tmp := d.Comments(post, after)
+		out = append(out, tmp...)
+
+		after = out[len(out)-1].Floor
+		if after >= post.CommentCount || len(tmp) == 0 {
+			break
+		}
+	}
 	return
 }

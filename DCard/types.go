@@ -60,6 +60,40 @@ func (p DCardPost) String() (out string) {
 	return
 }
 
+func (p DCardPost) Comments(after int) (out []DCardComment) {
+	out = default_agent.Comments(p, after)
+	return
+}
+
+type DCardComment struct {
+	Id             string `json:"id"`
+	Anonymous      bool   `json:"anonymous"`
+	PostId         int64  `json:"postId"`
+	CreatedAt      string `json:"createdAt"`
+	UpdatedAt      string `json:"updatedAt"`
+	Floor          int    `json:"floor"`
+	Content        string `json:"content"`
+	LikeCount      int    `json:"likeCount"`
+	WithNickName   bool   `json:"withNickname"`
+	HiddenByAuthor bool   `json:"hiddenByAuthor"`
+	//"meta": {},
+	Gender       string `json:"gender"`
+	School       string `json:"school"`
+	Host         bool   `json:"host"`
+	ReportReason string `json:"reportReason"`
+	//"mediaMeta": [],
+	Hidden              bool   `json:"hidden"`
+	InReview            bool   `json:"inReview"`
+	ReportReasonText    string `json:"reportReasonText"`
+	IsSuspiciousAccount bool   `json:"isSuspiciousAccount"`
+	PostAvatar          string `json:"postAvatar"`
+}
+
+func (c DCardComment) String() (out string) {
+	out = fmt.Sprintf("#%03d (%s) %s", c.Floor, c.Gender, c.Content)
+	return
+}
+
 type DCardBoard struct {
 	Name  string `json:"name"`
 	Alias string `json:"alias"`
