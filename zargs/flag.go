@@ -4,10 +4,11 @@ package zargs
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 )
 
 type Flag struct {
-	reflect.Type
+	reflect.Value
 
 	Name    string        /* Flag name */
 	Default reflect.Value /* default value */
@@ -16,7 +17,6 @@ type Flag struct {
 	shortcut rune /* The shortcut of the flag */
 	required bool /* Required flags */
 	raw      string
-	value    reflect.Value
 }
 
 func NewFlag(name string, in interface{}) (out *Flag) {
@@ -30,7 +30,7 @@ func NewFlag(name string, in interface{}) (out *Flag) {
 
 	switch v := reflect.ValueOf(in); v.Kind() {
 	case reflect.Bool, reflect.Int, reflect.String:
-		out.Type = v.Type()
+		out.Value = v
 	default:
 		err := fmt.Errorf("Not support '%s' (%s)", in, v.Kind())
 		panic(err)
@@ -44,13 +44,30 @@ func (flag *Flag) String() (out string) {
 	return
 }
 
-func (flag *Flag) Set(in string) {
+func (flag *Flag) Set(in string) (out *Flag) {
 	flag.raw = in
+
+	switch flag.Value.Kind() {
+	case reflect.Bool:
+		flag.Value = reflect.ValueOf(!flag.Value.Bool())
+	case reflect.Int:
+		v, err := strconv.ParseInt(in, 10, 32)
+		if err != nil {
+			/* Cannot convert the int */
+			err = fmt.Errorf("Set '%s' failure - %s", flag.Name, err)
+			panic(err)
+		}
+		flag.Value = reflect.ValueOf(int(v))
+	case reflect.String:
+		flag.Value = reflect.ValueOf(in)
+	}
+
+	out = flag
 	return
 }
 
 func (flag *Flag) Get() (out interface{}) {
-	out = flag.value.Interface()
+	out = flag.Value.Interface()
 	return
 }
 
@@ -62,6 +79,12 @@ func (flag *Flag) Shortcut(c rune) (out *Flag) {
 
 func (flag *Flag) Help(in string) (out *Flag) {
 	flag.help = in
+	out = flag
+	return
+}
+
+func (flag *Flag) Required() (out *Flag) {
+	flag.required = true
 	out = flag
 	return
 }
