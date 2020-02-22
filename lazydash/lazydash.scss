@@ -1,0 +1,41 @@
+body {
+	font-family	: Monaco, Arial, Helvetica, sans-serif;
+	font-size	: 1.2em;
+	background	: #E0E0FF;
+	color		: #222333;
+
+	margin	: 0;
+	padding	: 0;
+
+	* {
+		box-sizing	: border-box;
+	}
+}
+
+#lazydash {
+	width	: 100vw;
+	height	: 100vh;
+
+	#ld_header {
+		height	: 10%;
+		width	: 100%;
+	}
+
+	#ld_body {
+		height	: 80%;
+		width	: 100%;
+
+		#ld_sidebar {
+			width	: 30%;
+		}
+
+		#ld_box {
+			width	: 70%;
+		}
+	}
+
+	#ld_footer {
+		height	: 10%;
+		width	: 100%;
+	}
+}
