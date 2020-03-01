@@ -1,0 +1,20 @@
+#! /usr/bin/env sh
+
+function TelegramBot() {
+	URI="https://api.telegram.org/bot"
+	TOKEN=""
+	CHAT_ID=''
+	MESSAGE="$1"
+
+
+	if [ ! -z "${TOKEN}" -a ! -z "${CHAT_ID}" ]; then
+		curl \
+			-X POST \
+			-H 'Content-Type: application/json' \
+			-d "{\"parse_mode\": \"Markdown\", \"chat_id\": \"${CHAT_ID}\", \"text\": \"${MESSAGE}\"}" \
+			"${URI}${TOKEN}/sendMessage" 2>/dev/null 1>&2
+	fi
+}
+
+
+TelegramBot "User \`${PAM_USER}\` login in \`$(hostname)\` from \`$(echo ${PAM_RHOST} | cut -d ' ' -f 1)\`"
