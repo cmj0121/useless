@@ -9,15 +9,16 @@ import (
 )
 
 type Link struct {
-	Key        string
-	SourceLink string
+	Key        string `json:"key"`
+	SourceLink string `json:"source"`
 }
 
 type ShortURL struct {
 	*sql.DB
 	*log.Logger
 
-	Table string
+	Table    string
+	MaxRetry int
 
 	driver string
 }
@@ -36,9 +37,10 @@ func MustNew(driver, dsn string) (surl *ShortURL) {
 	}
 
 	surl = &ShortURL{
-		DB:     db,
-		Logger: log.New(os.Stderr, "", log.Lshortfile|log.LUTC),
-		Table:  "short_url",
+		DB:       db,
+		Logger:   log.New(os.Stderr, "", log.Lshortfile|log.LUTC),
+		Table:    "short_url",
+		MaxRetry: 5,
 
 		driver: driver,
 	}

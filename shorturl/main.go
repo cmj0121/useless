@@ -21,9 +21,5 @@ func main() {
 
 	srv := MustNew(driver, dsn)
 	srv.Create()
-	srv.Get("demo")
-	srv.Set(&Link{
-		Key:        "demo",
-		SourceLink: "http://example.com",
-	})
+	srv.RunWeb(":9999")
 }
