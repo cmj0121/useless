@@ -1,16 +1,10 @@
-GO-SRC=$(wildcard *.go)
+.PHONY: all clean
 
-.PHONY: all run gofmt
+all:	# show this help message
+	@printf "Usage: make [OPTION]\n"
+	@printf "\n"
+	@perl -nle 'print $$& if m{^[\w-]+:.*?#.*$$}' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?#"} {printf "    %-18s %s\n", $$1, $$2}'
 
-all: gofmt
-
-run: gofmt
-	go run lazydash.go
-
-gofmt: $(GO-SRC)
-	gofmt -s -w $^
-
-.PHONY: clean
-
-clean:
+clean:	# cleanup environment
 	find . -name '*.swp' -delete
