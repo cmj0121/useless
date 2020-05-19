@@ -1,0 +1,17 @@
+[Unit]
+Description=go/dart based timer
+After=nginx.service
+
+[Service]
+Type=simple
+User=nobody
+Group=nobody
+Restart=always
+RestartSec=5
+WorkingDirectory=/srv/src/timer
+ExecStart=/srv/src/timer/timer -b 127.0.0.1:10090
+
+[Install]
+WantedBy=multi-user.target
+
+# vim: set ft=systemd:

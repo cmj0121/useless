@@ -1,4 +1,4 @@
-.PHONY: all
+.PHONY: all publish
 
 SRC=$(wildcard web/*)
 BUILD=build
@@ -17,6 +17,7 @@ $(RELEASE): $(BUILD) $(TIMER)	# build the release code
 	mkdir $@
 	cp -a build/{index.html,styles.css,main.dart.js} $@/
 	cp timer $@
+	cp dart-timer.service $@
 
 $(BUILD): $(SRC)				# build the web-view
 	pub get
@@ -27,3 +28,6 @@ $(TIMER): $(TIMER).go			# build the server code
 
 clean:
 	rm -rf $(BUILD) $(RELEASE)
+
+publish: release				# publish to server
+	[ -z "$(TARGET)" ] || rsync -arpx --delete release/ $(TARGET)
