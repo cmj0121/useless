@@ -3,11 +3,11 @@ package main
 
 import (
 	"fmt"
-	"os"
-	"net/http"
+	"html/template"
 	"io/ioutil"
 	"log"
-	"html/template"
+	"net/http"
+	"os"
 )
 
 func Help() {
@@ -32,11 +32,11 @@ func html_index(w http.ResponseWriter, r *http.Request) {
 
 	tmpl := template.Must(template.ParseFiles("index.html"))
 	tmpl.Execute(w, struct {
-		Title string
-		Timestamp string
-	} {
-		Title: title,
-		Timestamp: timestamp,
+		Title     string
+		Timestamp template.URL
+	}{
+		Title:     title,
+		Timestamp: template.URL(timestamp),
 	})
 }
 
@@ -60,14 +60,14 @@ func main() {
 
 	bind := ":8888"
 	debug := false
-	for idx := 1; idx < len(os.Args); idx ++ {
+	for idx := 1; idx < len(os.Args); idx++ {
 		switch args := os.Args[idx]; args {
 		case "-d", "--debug":
 			debug = true
 		case "-h", "--help":
 			Help()
 		case "-b", "--bind":
-			idx ++
+			idx++
 			if idx >= len(os.Args) {
 				err := fmt.Errorf("-b, --bind need ADDRESS")
 				panic(err)
