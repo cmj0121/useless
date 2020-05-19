@@ -1,0 +1,29 @@
+body {
+	margin	: 0;
+	width	: 100vw;
+	height	: 100vh;
+	display	: flex;
+
+	background	: #CECEDD;
+	font-family	: Monaco, Arial;
+	font-size	: 2em;
+	@media only screen and (orientation: portrait) {
+		font-size	: 4.5em;
+	}
+
+	justify-content	: center;
+	align-items		: center;
+
+	#box {
+		label {
+			padding		: 0 12px 0 12px;
+			font-weight	: bold;
+		}
+
+		.item {
+			display		: block;
+			width		: 100vw;
+			text-align	: center;
+		}
+	}
+}
