@@ -2,24 +2,11 @@ import 'dart:html';
 import 'dart:async';
 
 void main() {
-	var m = Uri.base.queryParameters['m'];
-	var t = Uri.base.queryParameters['t'];
-
-	if (m == "" || m == null) {
-		m = "開啟網頁";
-	}
-
-	DateTime timestamp;
-	if (t == "" || t == null) {
+	var timestamp = DateTime.tryParse(querySelector('#timer').getAttribute('data-src'));
+	if (timestamp == null) {
 		timestamp = new DateTime.now();
-	} else {
-		timestamp = DateTime.tryParse(t);
-		if (timestamp == null) {
-			timestamp = new DateTime.now();
-		}
 	}
 
-	querySelector('#title').text = m;
 	Timer.periodic(Duration(milliseconds: 200), (Timer timer) {
 		var now = new DateTime.now();
 		var diff = now.difference(timestamp);
