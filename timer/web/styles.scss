@@ -14,12 +14,23 @@ body {
 	justify-content	: center;
 	align-items		: center;
 
+	.hidden {
+		visibility	: hidden;
+	}
+
 	#box {
-		label {
+		#title, #label {
 			padding		: 0 12px 0 12px;
+			margin		: 0 5px 0 5px;
 			font-weight	: bold;
 		}
 
+		input {
+			outline		: none;
+			font-size	: 70%;
+			background		: #CECEDD;
+			border-radius	: 17px;
+		}
 		.item {
 			display		: block;
 			width		: 100vw;

@@ -11,8 +11,12 @@
 
 <BODY>
 	<div id='box'>
-		<span class='item'><label id='title'>{{- .Title -}}</label><span id='tense'></span></span>
+		<span class='item'><label id='title' contenteditable='true'>{{- .Title -}}</label><span id='tense'></span></span>
 		<span class='item'><label id='timer' data-src='{{- .Timestamp -}}'></label></span>
+		<span class='item'>
+			<span id='btn'>🔒</span>
+			<input id='timestamp' class='hidden' type='datetime-local' value='{{- .Timestamp -}}' data-src='{{- .Timestamp -}}' />
+		</span>
 	</div>
 </BODY>
 </HTML>
